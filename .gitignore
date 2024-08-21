@@ -1,0 +1,4 @@
+__pycache__/
+local_database.db
+.mypy_cache/
+env/
