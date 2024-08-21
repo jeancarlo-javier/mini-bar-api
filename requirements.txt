@@ -1,5 +1,9 @@
 fastapi
 uvicorn
 sqlalchemy
+pyjwt
 passlib[bcrypt]
+pydantic[email]
+python-multipart
+types-passlib
 ruff

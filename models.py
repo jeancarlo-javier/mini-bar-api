@@ -18,13 +18,13 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(
-        Enum("Waitstaff", "Kitchen Staff", name="user_roles"), nullable=False
+        Enum("staff", "admin", name="user_roles"), nullable=False
     )
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(String, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
 
