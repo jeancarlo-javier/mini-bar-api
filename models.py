@@ -1,6 +1,5 @@
 from sqlalchemy import (
     Integer,
-    BigInteger,
     String,
     Numeric,
     ForeignKey,
@@ -32,16 +31,16 @@ class User(Base):
 class Product(Base):
     __tablename__ = "products"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String(2000), nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    category: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class Order(Base):
     __tablename__ = "orders"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_time: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -50,7 +49,7 @@ class Order(Base):
         nullable=False,
     )
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id"), nullable=False
+        Integer, ForeignKey("users.id"), nullable=False
     )
     table_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -61,12 +60,12 @@ class Order(Base):
 class OrderItem(Base):
     __tablename__ = "order_items"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("orders.id"), nullable=False
+        Integer, ForeignKey("orders.id"), nullable=False
     )
     product_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("products.id"), nullable=False
+        Integer, ForeignKey("products.id"), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 

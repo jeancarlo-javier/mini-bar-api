@@ -26,7 +26,7 @@ def create_access_token(
     return encoded_jwt
 
 
-def decode_token(token):
+def decode_token(token: str):
     try:
         decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return decoded

@@ -27,3 +27,9 @@ class UserCreate(BaseModel):
 
 class UserInDB(UserBase):
     hashed_password: SecretStr
+
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str
+    price: float

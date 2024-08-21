@@ -1,12 +1,13 @@
+import schemes
+from security import oauth2_scheme
 from typing import Annotated
 from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-import schemes
-from models import Base
+from models import Base, Product
 from db import engine, get_db
 from auth import get_db_user_with_email, register_user
-from jwtUtils import create_access_token
+from jwtUtils import create_access_token, decode_token
 
 Base.metadata.create_all(bind=engine)
 
@@ -44,5 +45,24 @@ def signup(
 
 
 @app.post("/product")
-def create_product():
-    return {"message": "Hello World"}
+def create_product(
+    form_data: schemes.ProductCreate,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    decode_token(token)
+
+    new_product = Product(
+        name=form_data.name, description=form_data.description, price=form_data.price
+    )
+    db.add(new_product)
+    db.commit()
+
+    db.refresh(new_product)
+
+    return {
+        "id": new_product.id,
+        "name": new_product.name,
+        "description": new_product.description,
+        "price": new_product.price,
+    }
