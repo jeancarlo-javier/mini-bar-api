@@ -1,4 +1,3 @@
-from typing import Union
 from pydantic import BaseModel, EmailStr, SecretStr
 
 
@@ -33,3 +32,13 @@ class ProductCreate(BaseModel):
     name: str
     description: str
     price: float
+
+
+class OrderCreate(BaseModel):
+    table_number: int
+
+
+class OrderItemCreate(BaseModel):
+    order_id: int
+    product_id: int
+    quantity: int

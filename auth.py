@@ -15,7 +15,18 @@ def hash_password(password: str):
     return password_context.hash(password)
 
 
-def get_db_user_with_email(db: Session, email: str, plain_password: str):
+def get_db_user_by_email(db: Session, email: str):
+    db_user = db.query(User).filter(User.email == email).first()
+
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Incorrect email.")
+
+    return UserBase(
+        id=db_user.id, name=db_user.name, role=db_user.role, email=db_user.email
+    )
+
+
+def authenticate_user(db: Session, email: str, plain_password: str):
     db_user = db.query(User).filter(User.email == email).first()
 
     if not db_user or not verify_password(plain_password, db_user.hashed_password):
@@ -33,7 +44,7 @@ def register_user(db: Session, user: UserCreate):
         name=user.name,
         email=user.email,
         hashed_password=hashed_password,
-        role="staff",
+        role="admin",
     )
 
     db.add(new_user)

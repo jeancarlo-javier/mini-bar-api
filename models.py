@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Integer,
     String,
+    Boolean,
     Numeric,
     ForeignKey,
     Enum,
@@ -42,10 +43,11 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_time: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), index=True
     )
     status: Mapped[str] = mapped_column(
-        Enum("Pending", "In Progress", "Completed", name="order_statuses"),
+        Enum("active", "completed", "canceled", name="order_statuses"),
+        default="active",
         nullable=False,
     )
     user_id: Mapped[int] = mapped_column(
@@ -68,6 +70,17 @@ class OrderItem(Base):
         Integer, ForeignKey("products.id"), nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(
+        Enum(
+            "pending",
+            "completed",
+            "canceled",
+            name="item_statuses",
+        ),
+        default="pending",
+        nullable=False,
+    )
+    paid: Mapped[bool] = mapped_column(Boolean, default=False)
 
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped["Product"] = relationship()
