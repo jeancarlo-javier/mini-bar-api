@@ -7,3 +7,4 @@ pydantic[email]
 python-multipart
 types-passlib
 ruff
+pytz

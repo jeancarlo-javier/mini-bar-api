@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
 DB_NAME = "sqlite:///./local_database.db"
-engine = create_engine(DB_NAME, connect_args={"check_same_thread": False}, echo=True)
+engine = create_engine(DB_NAME, connect_args={"check_same_thread": False})
 
 
 def _enable_foreign_keys(dbapi_connection, connection_record):

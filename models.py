@@ -1,3 +1,5 @@
+from sqlalchemy import func, text
+from pytz import timezone
 from sqlalchemy import (
     Integer,
     String,
@@ -8,7 +10,8 @@ from sqlalchemy import (
     DateTime,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
+from datetime import datetime
+import pytz
 
 
 class Base(DeclarativeBase):
@@ -36,6 +39,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String(2000), nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    production_cost: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
 
 class Order(Base):
@@ -45,9 +49,12 @@ class Order(Base):
     order_time: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+    last_order_time: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
     status: Mapped[str] = mapped_column(
-        Enum("active", "completed", "canceled", name="order_statuses"),
-        default="active",
+        Enum("pending", "completed", "canceled", name="order_statuses"),
+        default="pending",
         nullable=False,
     )
     user_id: Mapped[int] = mapped_column(
@@ -57,6 +64,14 @@ class Order(Base):
 
     user: Mapped["User"] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
+
+    def set_local_order_time(self, region="America/Lima"):
+        tz = pytz.timezone(region)
+        self.order_time = datetime.now(tz)
+
+    def set_last_order_time(self, region="America/Lima"):
+        tz = pytz.timezone(region)
+        self.last_order_time = datetime.now(tz)
 
 
 class OrderItem(Base):
@@ -69,7 +84,11 @@ class OrderItem(Base):
     product_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("products.id"), nullable=False
     )
+    order_time: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    ammount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[str] = mapped_column(
         Enum(
             "pending",
@@ -84,3 +103,7 @@ class OrderItem(Base):
 
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped["Product"] = relationship()
+
+    def set_local_order_time(self, region="America/Lima"):
+        tz = pytz.timezone(region)
+        self.order_time = datetime.now(tz)
