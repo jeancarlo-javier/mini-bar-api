@@ -22,7 +22,7 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    plain_password: SecretStr
+    password: SecretStr
 
 
 class UserInDB(UserBase):
@@ -47,8 +47,9 @@ class OrderBase(BaseModel):
     id: int
     order_time: str
     status: str
-    user_id: int
+    user: UserBase
     table_number: int
+    total: float
 
 
 class OrderCreate(BaseModel):

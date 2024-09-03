@@ -5,6 +5,5 @@ pyjwt
 passlib[bcrypt]
 pydantic[email]
 python-multipart
-types-passlib
 ruff
 pytz

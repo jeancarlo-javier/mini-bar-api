@@ -1,5 +1,4 @@
-from sqlalchemy import func, text
-from pytz import timezone
+from sqlalchemy import func
 from sqlalchemy import (
     Integer,
     String,
@@ -46,12 +45,6 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    order_time: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), index=True
-    )
-    last_order_time: Mapped[DateTime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), index=True
-    )
     status: Mapped[str] = mapped_column(
         Enum("pending", "completed", "canceled", name="order_statuses"),
         default="pending",
@@ -61,6 +54,13 @@ class Order(Base):
         Integer, ForeignKey("users.id"), nullable=False
     )
     table_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    total: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    order_time: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    last_order_time: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
     user: Mapped["User"] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order")

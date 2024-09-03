@@ -12,6 +12,7 @@ import schemes
 from datetime import datetime
 from security import oauth2_scheme
 from sqlalchemy import DateTime
+from datetime import timedelta
 
 Base.metadata.create_all(bind=engine)
 
@@ -176,25 +177,31 @@ def create_order(
 ):
     # verify_role("staff", token, db)
 
-    new_order = Order(
+    order = Order(
         user_id=decode_token(token)["sub"],
         status="pending",
         table_number=form_data.table_number,
     )
-    db.add(new_order)
+    db.add(order)
     db.commit()
 
-    new_order.set_local_order_time(region="America/Lima")
+    order.set_local_order_time(region="America/Lima")
     db.commit()
 
-    db.refresh(new_order)
+    db.refresh(order)
 
     return schemes.OrderBase(
-        id=new_order.id,
-        order_time=format_datetime(new_order.order_time),
-        status=new_order.status,
-        user_id=new_order.user_id,
-        table_number=new_order.table_number,
+        id=order.id,
+        order_time=format_datetime(order.order_time),
+        status=order.status,
+        user=schemes.UserBase(
+            id=order.user_id,
+            name=order.user.name,
+            role=order.user.role,
+            email=order.user.email,
+        ),
+        table_number=order.table_number,
+        total=order.total,
     )
 
 
@@ -204,7 +211,7 @@ def read_order(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    verify_role("admin", token, db)
+    # verify_role("admin", token, db)
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
@@ -215,8 +222,14 @@ def read_order(
         id=order.id,
         order_time=format_datetime(order.order_time),
         status=order.status,
-        user_id=order.user_id,
+        user=schemes.UserBase(
+            id=order.user_id,
+            name=order.user.name,
+            role=order.user.role,
+            email=order.user.email,
+        ),
         table_number=order.table_number,
+        total=order.total,
     )
 
 
@@ -225,16 +238,28 @@ def read_orders(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    verify_role("staff", token, db)
+    # verify_role("staff", token, db)
 
-    orders = db.query(Order).order_by(Order.order_time.desc()).all()
+    orders = (
+        db.query(Order)
+        .order_by(Order.order_time.desc())
+        .filter(Order.order_time >= datetime.now() - timedelta(hours=12))
+        .all()
+    )
+
     return [
         schemes.OrderBase(
             id=order.id,
             order_time=format_datetime(order.order_time),
             status=order.status,
-            user_id=order.user_id,
+            user=schemes.UserBase(
+                id=order.user_id,
+                name=order.user.name,
+                role=order.user.role,
+                email=order.user.email,
+            ),
             table_number=order.table_number,
+            total=order.total,
         )
         for order in orders
     ]

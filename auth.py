@@ -38,7 +38,7 @@ def authenticate_user(db: Session, email: str, plain_password: str):
 
 
 def register_user(db: Session, user: UserCreate):
-    hashed_password = hash_password(user.plain_password.get_secret_value())
+    hashed_password = hash_password(user.password.get_secret_value())
 
     new_user = User(
         name=user.name,
