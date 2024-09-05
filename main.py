@@ -1,4 +1,5 @@
 import schemes
+import os
 from typing import Annotated, Union
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -41,6 +42,11 @@ def verify_role(required_role: str, token: str, db: Session) -> None:
         )
 
 
+@app.get("/docs", dependencies=[Depends(oauth2_scheme)])
+def custom_openapi():
+    return {"msg": "Hello World"}
+
+
 # Helper function to convert datetime to string
 def format_datetime(dt_obj: Union[DateTime, datetime]) -> str:
     if isinstance(dt_obj, datetime):
@@ -64,10 +70,15 @@ async def login(
 
 @app.post("/signup", response_model=schemes.UserBase, tags=["auth"])
 def signup(
-    user: schemes.UserCreate,
+    form_data: schemes.UserCreate,
     db: Session = Depends(get_db),
 ):
-    new_user = register_user(db, user)
+    if form_data.secret.get_secret_value() != os.getenv("REGISTER_KEY"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
+
+    new_user = register_user(db, form_data)
     return schemes.UserBase(
         id=new_user.id,
         name=new_user.name,

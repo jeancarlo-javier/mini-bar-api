@@ -23,6 +23,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: SecretStr
+    secret: SecretStr
 
 
 class UserInDB(UserBase):
