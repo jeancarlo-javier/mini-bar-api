@@ -2,3 +2,6 @@ __pycache__/
 local_database.db
 .mypy_cache/
 env/
+.env
+.env.prod
+.env.dev

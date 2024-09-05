@@ -7,3 +7,4 @@ pydantic[email]
 python-multipart
 ruff
 pytz
+python-dotenv

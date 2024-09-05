@@ -1,9 +1,22 @@
+import os
 from typing import Generator
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
-DB_NAME = "sqlite:///./local_database.db"
-engine = create_engine(DB_NAME, connect_args={"check_same_thread": False})
+ENV = os.getenv("ENV", "development")
+TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
+
+DB_URL = ""
+if ENV == "development":
+    DB_URL = "sqlite:///./local_database.db"
+elif ENV == "production":
+    DB_URL = f"sqlite+{TURSO_DATABASE_URL}/?authToken={TURSO_AUTH_TOKEN}&secure=true"
+else:
+    raise ValueError("Invalid environment")
+
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine)
 
 
 def _enable_foreign_keys(dbapi_connection, connection_record):
@@ -13,9 +26,6 @@ def _enable_foreign_keys(dbapi_connection, connection_record):
 
 
 event.listen(engine, "connect", _enable_foreign_keys)
-
-
-SessionLocal = sessionmaker(bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:

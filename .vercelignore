@@ -1,0 +1,21 @@
+local_database.db
+
+# Excluir archivos de entorno
+.env
+.env.development
+.env.production
+
+# Excluir el entorno virtual
+env/
+
+# Excluir cachés y archivos compilados
+__pycache__/
+*.pyc
+
+# Excluir archivos de configuración locales
+.DS_Store
+
+# Excluir documentación y otros archivos no esenciales
+README.md
+docs/
+tests/

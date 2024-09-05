@@ -1,10 +1,14 @@
+import os
+from dotenv import load_dotenv
 import jwt
 from fastapi import HTTPException
 from typing import Union
 from datetime import datetime, timedelta, timezone
 
-SECRET_KEY = "866fff7f4ecad9aa1fc976912eeafed7add0c0aea74ed610ec982353c968d64c"
-ALGORITHM = "HS256"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = 720
 
 
@@ -28,6 +32,10 @@ def create_access_token(
 
 def decode_and_verify_token(token: str):
     try:
+        if not ALGORITHM or not SECRET_KEY:
+            raise HTTPException(
+                status_code=401, detail="Missing JWT Algorithm or Secret Key"
+            )
         decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return decoded
     except jwt.ExpiredSignatureError:
