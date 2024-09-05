@@ -1,4 +1,5 @@
-from typing import Union
+import schemes
+from typing import Annotated, Union
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,8 +8,6 @@ from models import Base, Product, Order, OrderItem
 from db import engine, get_db
 from auth import authenticate_user, register_user, get_db_user_by_email
 from jwtUtils import create_access_token, decode_and_verify_token
-from typing import Annotated
-import schemes
 from datetime import datetime
 from security import oauth2_scheme
 from sqlalchemy import DateTime
