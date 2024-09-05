@@ -46,6 +46,7 @@ class ProductPublic(BaseModel):
 class OrderBase(BaseModel):
     id: int
     order_time: str
+    last_order_time: str
     status: str
     user: UserBase
     table_number: int
@@ -75,7 +76,7 @@ class OrderItemPublic(BaseModel):
     product: ProductPublic
     order_time: str
     quantity: int
-    ammount: float
+    amount: float
     status: str
     paid: bool
     order_id: int

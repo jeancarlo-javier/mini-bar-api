@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from models import Base, Product, Order, OrderItem
 from db import engine, get_db
 from auth import authenticate_user, register_user, get_db_user_by_email
-from jwtUtils import create_access_token, decode_token
+from jwtUtils import create_access_token, decode_and_verify_token
 from typing import Annotated
 import schemes
 from datetime import datetime
@@ -30,7 +30,7 @@ app.add_middleware(
 
 # Helper function to check if the user has the required role
 def verify_role(required_role: str, token: str, db: Session) -> None:
-    decoded = decode_token(token)
+    decoded = decode_and_verify_token(token)
     user = get_db_user_by_email(db, decoded["email"])
     if user.role != required_role:
         raise HTTPException(
@@ -73,6 +73,23 @@ def signup(
     )
 
 
+# User
+@app.get("/me", response_model=schemes.UserBase, tags=["user"])
+def read_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    decoded = decode_and_verify_token(token)
+    user = get_db_user_by_email(db, decoded["email"])
+
+    return schemes.UserBase(
+        id=user.id,
+        name=user.name,
+        role=user.role,
+        email=user.email,
+    )
+
+
 # Products
 @app.get(
     "/products/{product_id}", response_model=schemes.ProductCreate, tags=["products"]
@@ -82,7 +99,7 @@ def read_product(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    verify_role("admin", token, db)
+    decode_and_verify_token(token)
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -112,6 +129,8 @@ def read_products(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
+    decode_and_verify_token(token)
+
     products = db.query(Product).all()
 
     return [
@@ -169,16 +188,16 @@ def delete_product(
 
 
 # Orders
-@app.post("/orders", response_model=schemes.OrderBase, tags=["orders"])
+@app.post("/orders", response_model=schemes.OrderBase, tags=["orders"], status_code=201)
 def create_order(
     form_data: schemes.OrderCreate,
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    # verify_role("staff", token, db)
+    decoded = decode_and_verify_token(token)
 
     order = Order(
-        user_id=decode_token(token)["sub"],
+        user_id=decoded["sub"],
         status="pending",
         table_number=form_data.table_number,
     )
@@ -186,14 +205,16 @@ def create_order(
     db.commit()
 
     order.set_local_order_time(region="America/Lima")
+    order.set_last_order_time(region="America/Lima")
     db.commit()
 
     db.refresh(order)
 
     return schemes.OrderBase(
         id=order.id,
-        order_time=format_datetime(order.order_time),
         status=order.status,
+        order_time=format_datetime(order.order_time),
+        last_order_time=format_datetime(order.last_order_time),
         user=schemes.UserBase(
             id=order.user_id,
             name=order.user.name,
@@ -211,17 +232,19 @@ def read_order(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    # verify_role("admin", token, db)
+    decode_and_verify_token(token)
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Order not found."
         )
+
     return schemes.OrderBase(
         id=order.id,
-        order_time=format_datetime(order.order_time),
         status=order.status,
+        order_time=format_datetime(order.order_time),
+        last_order_time=format_datetime(order.last_order_time),
         user=schemes.UserBase(
             id=order.user_id,
             name=order.user.name,
@@ -238,11 +261,11 @@ def read_orders(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    # verify_role("staff", token, db)
+    decode_and_verify_token(token)
 
     orders = (
         db.query(Order)
-        .order_by(Order.order_time.desc())
+        .order_by(Order.last_order_time.desc())
         .filter(Order.order_time >= datetime.now() - timedelta(hours=12))
         .all()
     )
@@ -250,8 +273,9 @@ def read_orders(
     return [
         schemes.OrderBase(
             id=order.id,
-            order_time=format_datetime(order.order_time),
             status=order.status,
+            order_time=format_datetime(order.order_time),
+            last_order_time=format_datetime(order.last_order_time),
             user=schemes.UserBase(
                 id=order.user_id,
                 name=order.user.name,
@@ -266,53 +290,78 @@ def read_orders(
 
 
 @app.post(
-    "/orders/{order_id}/items", response_model=schemes.OrderItemPublic, tags=["orders"]
+    "/orders/{order_id}/items",
+    response_model=list[schemes.OrderItemPublic],
+    tags=["orders"],
+    status_code=201,
 )
-def create_order_item(
+def add_items_to_order(
     order_id: int,
-    form_data: schemes.OrderItemCreate,
+    items: list[schemes.OrderItemCreate],
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    # verify_role("staff", token, db)
+    decode_and_verify_token(token)
 
+    # Fetch the order once and validate
     order = db.query(Order).filter(Order.id == order_id).first()
-    product = db.query(Product).filter(Product.id == form_data.product_id).first()
-
-    if not order or not product:
+    if not order:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Order or product not found."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found.",
         )
 
-    new_order_item = OrderItem(
-        order_id=order_id,
-        product_id=form_data.product_id,
-        quantity=form_data.quantity,
-        ammount=form_data.quantity * product.price,
-    )
+    result_items = []
 
-    db.add(new_order_item)
-    db.commit()
+    for item in items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
 
-    new_order_item.set_local_order_time(region="America/Lima")
-    db.commit()
+        # Validate product
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product with id {item.product_id} not found.",
+            )
 
-    db.refresh(new_order_item)
-    return schemes.OrderItemPublic(
-        id=new_order_item.id,
-        product=schemes.ProductPublic(
-            id=new_order_item.product_id,
-            name=new_order_item.product.name,
-            description=new_order_item.product.description,
-            price=new_order_item.product.price,
-        ),
-        order_time=format_datetime(new_order_item.order_time),
-        quantity=new_order_item.quantity,
-        ammount=new_order_item.ammount,
-        status=new_order_item.status,
-        paid=new_order_item.paid,
-        order_id=new_order_item.order_id,
-    )
+        # Create new order item
+        new_order_item = OrderItem(
+            order_id=order_id,
+            product_id=item.product_id,
+            quantity=item.quantity,
+            amount=item.quantity * product.price,
+        )
+
+        db.add(new_order_item)
+
+        # Update order totals and times
+        new_order_item.set_local_order_time(region="America/Lima")
+        order.set_last_order_time(region="America/Lima")
+        order.total += new_order_item.amount
+
+        # Commit and refresh order item
+        db.commit()
+        db.refresh(new_order_item)
+
+        # Append the result to the list
+        result_items.append(
+            schemes.OrderItemPublic(
+                id=new_order_item.id,
+                product=schemes.ProductPublic(
+                    id=new_order_item.product_id,
+                    name=new_order_item.product.name,
+                    description=new_order_item.product.description,
+                    price=new_order_item.product.price,
+                ),
+                order_time=format_datetime(new_order_item.order_time),
+                quantity=new_order_item.quantity,
+                amount=new_order_item.amount,
+                status=new_order_item.status,
+                paid=new_order_item.paid,
+                order_id=new_order_item.order_id,
+            )
+        )
+
+    return result_items
 
 
 @app.get(
@@ -325,7 +374,7 @@ def read_order_items(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Session = Depends(get_db),
 ):
-    # verify_role("staff", token, db)
+    decode_and_verify_token(token)
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
@@ -351,7 +400,7 @@ def read_order_items(
             ),
             order_time=format_datetime(order_item.order_time),
             quantity=order_item.quantity,
-            ammount=order_item.ammount,
+            amount=order_item.amount,
             status=order_item.status,
             paid=order_item.paid,
             order_id=order_item.order_id,

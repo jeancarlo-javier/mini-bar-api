@@ -26,13 +26,13 @@ def create_access_token(
     return encoded_jwt
 
 
-def decode_token(token: str):
+def decode_and_verify_token(token: str):
     try:
         decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return decoded
     except jwt.ExpiredSignatureError:
-        return HTTPException(status_code=401, detail="Token has expired")
+        raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
-        return HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token")
     except Exception:
-        return HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token")

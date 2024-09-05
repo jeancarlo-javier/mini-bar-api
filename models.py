@@ -88,7 +88,7 @@ class OrderItem(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    ammount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[str] = mapped_column(
         Enum(
             "pending",
