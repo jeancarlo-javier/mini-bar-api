@@ -131,7 +131,7 @@ def read_products(
 ):
     decode_and_verify_token(token)
 
-    products = db.query(Product).all()
+    products = db.query(Product).order_by(Product.name.asc()).all()
 
     return [
         schemes.ProductPublic(
@@ -139,6 +139,7 @@ def read_products(
             name=product.name,
             description=product.description,
             price=product.price,
+            archived=product.archived,
         )
         for product in products
     ]
@@ -292,6 +293,43 @@ def read_orders(
     ]
 
 
+@app.patch(
+    "/orders/{order_id}/complete",
+    tags=["orders"],
+)
+def complete_order(
+    order_id: int,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    decode_and_verify_token(token)
+    order = db.query(Order).filter(Order.id == order_id).first()
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found."
+        )
+
+    if order.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order is not pending, can't be completed.",
+        )
+
+    for item in order.items:
+        if item.status != "attended" or not item.paid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Order is not complete, can't be completed.",
+            )
+
+    order.status = "completed"
+    db.commit()
+
+    return {"message": "Order was completed successfully"}
+
+
+# Order Items
 @app.post(
     "/orders/{order_id}/items",
     response_model=list[schemes.OrderItemPublic],
@@ -354,6 +392,7 @@ def add_items_to_order(
                     name=new_order_item.product.name,
                     description=new_order_item.product.description,
                     price=new_order_item.product.price,
+                    archived=new_order_item.product.archived,
                 ),
                 order_time=format_datetime(new_order_item.order_time),
                 quantity=new_order_item.quantity,
@@ -400,6 +439,7 @@ def read_order_items(
                 name=order_item.product.name,
                 description=order_item.product.description,
                 price=order_item.product.price,
+                archived=order_item.product.archived,
             ),
             order_time=format_datetime(order_item.order_time),
             quantity=order_item.quantity,

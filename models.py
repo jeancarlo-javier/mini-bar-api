@@ -39,6 +39,7 @@ class Product(Base):
     description: Mapped[str] = mapped_column(String(2000), nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     production_cost: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class Order(Base):

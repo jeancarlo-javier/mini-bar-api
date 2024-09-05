@@ -41,6 +41,7 @@ class ProductPublic(BaseModel):
     name: str
     description: str
     price: float
+    archived: bool
 
 
 class OrderBase(BaseModel):
