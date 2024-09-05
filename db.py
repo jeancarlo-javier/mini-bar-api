@@ -7,6 +7,9 @@ ENV = os.getenv("ENV", "development")
 TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
 TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
 
+print(f"TURSO_DATABASE_URL: {TURSO_DATABASE_URL}")
+print(f"TURSO_AUTH_TOKEN: {TURSO_AUTH_TOKEN}")
+
 DB_URL = ""
 if ENV == "development":
     DB_URL = "sqlite:///./local_database.db"
@@ -15,7 +18,7 @@ elif ENV == "production":
 else:
     raise ValueError("Invalid environment")
 
-engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False}, echo=True)
 SessionLocal = sessionmaker(bind=engine)
 
 
