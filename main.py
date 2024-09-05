@@ -1,7 +1,6 @@
 import schemes
 from typing import Annotated, Union
-
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +13,8 @@ from datetime import datetime
 from security import oauth2_scheme
 from sqlalchemy import DateTime
 from datetime import timedelta
+
+load_dotenv()
 
 
 Base.metadata.create_all(bind=engine)
