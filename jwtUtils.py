@@ -1,18 +1,15 @@
 import os
-
-# from dotenv import load_dotenv
 import jwt
 from fastapi import HTTPException
 from typing import Union
 from datetime import datetime, timedelta, timezone
 
-# load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = 720
 print("SECRET_KEY", SECRET_KEY)
-print("ALGORITHM", ALGORITHM)
+print("JWT_ALGORITHM", ALGORITHM)
 
 
 def create_access_token(
