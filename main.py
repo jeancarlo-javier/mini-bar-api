@@ -317,7 +317,9 @@ def complete_order(
         )
 
     for item in order.items:
-        if item.status != "attended" or not item.paid:
+        if item.status == "canceled":
+            continue
+        elif item.status != "attended" or not item.paid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Order is not complete, can't be completed.",
@@ -499,3 +501,31 @@ def toggle_order_item_status(
     db.commit()
 
     return {"message": "Order item status was updated successfully"}
+
+
+@app.patch("/items/{item_id}/cancel", tags=["order-items"])
+def cancel_order_item(
+    item_id: int,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    decode_and_verify_token(token)
+
+    order_item = db.query(OrderItem).filter(OrderItem.id == item_id).first()
+    if not order_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order item not found.",
+        )
+
+    if order_item.status == "attended" or order_item.paid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order item was attended or paid, can't be canceled.",
+        )
+
+    order_item.order.total -= order_item.amount
+    order_item.status = "canceled"
+    db.commit()
+
+    return {"message": "Order item was canceled successfully"}
