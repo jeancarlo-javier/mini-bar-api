@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, SecretStr
-from datetime import datetime
+from typing import Literal
 
 
 class Token(BaseModel):
@@ -48,6 +48,7 @@ class OrderBase(BaseModel):
     order_time: str
     last_order_time: str
     status: str
+    note: str
     user: UserBase
     table_number: int
     total: float
@@ -80,3 +81,7 @@ class OrderItemPublic(BaseModel):
     status: str
     paid: bool
     order_id: int
+
+
+class OrderItemToggleStatus(BaseModel):
+    status: Literal["item_status", "item_payment_status"]

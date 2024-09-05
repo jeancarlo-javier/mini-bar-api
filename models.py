@@ -58,6 +58,7 @@ class Order(Base):
     order_time: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+    note: Mapped[str] = mapped_column(String(255), nullable=True, default="")
     last_order_time: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -92,7 +93,7 @@ class OrderItem(Base):
     status: Mapped[str] = mapped_column(
         Enum(
             "pending",
-            "completed",
+            "attended",
             "canceled",
             name="item_statuses",
         ),

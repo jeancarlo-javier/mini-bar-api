@@ -215,6 +215,7 @@ def create_order(
         status=order.status,
         order_time=format_datetime(order.order_time),
         last_order_time=format_datetime(order.last_order_time),
+        note=order.note,
         user=schemes.UserBase(
             id=order.user_id,
             name=order.user.name,
@@ -245,6 +246,7 @@ def read_order(
         status=order.status,
         order_time=format_datetime(order.order_time),
         last_order_time=format_datetime(order.last_order_time),
+        note=order.note,
         user=schemes.UserBase(
             id=order.user_id,
             name=order.user.name,
@@ -276,6 +278,7 @@ def read_orders(
             status=order.status,
             order_time=format_datetime(order.order_time),
             last_order_time=format_datetime(order.last_order_time),
+            note=order.note,
             user=schemes.UserBase(
                 id=order.user_id,
                 name=order.user.name,
@@ -292,7 +295,7 @@ def read_orders(
 @app.post(
     "/orders/{order_id}/items",
     response_model=list[schemes.OrderItemPublic],
-    tags=["orders"],
+    tags=["order-items"],
     status_code=201,
 )
 def add_items_to_order(
@@ -367,7 +370,7 @@ def add_items_to_order(
 @app.get(
     "/orders/{order_id}/items",
     response_model=list[schemes.OrderItemPublic],
-    tags=["orders"],
+    tags=["order-items"],
 )
 def read_order_items(
     order_id: int,
@@ -407,3 +410,52 @@ def read_order_items(
         )
         for order_item in order_items
     ]
+
+
+@app.patch(
+    "/items/{item_id}/toggle-status",
+    tags=["order-items"],
+)
+def toggle_order_item_status(
+    item_id: int,
+    form_data: schemes.OrderItemToggleStatus,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    decode_and_verify_token(token)
+
+    status_to_toggle = form_data.status
+
+    order_item = db.query(OrderItem).filter(OrderItem.id == item_id).first()
+    if not order_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order item not found.",
+        )
+
+    if status_to_toggle == "item_payment_status":
+        order_item.paid = not order_item.paid
+    elif status_to_toggle == "item_status":
+        if order_item.status == "pending":
+            order_item.status = "attended"
+        elif order_item.status == "attended":
+            order_item.status = "pending"
+        elif order_item.status == "canceled":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Order Canceled, can't be changed.",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid status to toggle.",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid status to toggle.",
+        )
+
+    db.commit()
+
+    return {"message": "Order item status was updated successfully"}
